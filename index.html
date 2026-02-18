@@ -1,57 +1,233 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopee Pi - Buoc 10</title>
-    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-</head>
-<body style="text-align: center; padding: 20px; font-family: sans-serif;">
-
-    <h2 style="color: #ee4d2d;">SHOPEE PTM</h2>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopee PTM - Mua sắm bằng Pi Network</title>
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      background: #f5f5f5;
+      color: #333;
+    }
+    header {
+      background: #ee4d2d;
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .logo { font-size: 22px; font-weight: bold; }
+    .menu-icon { font-size: 30px; cursor: pointer; }
     
-    <p id="status" style="color: gray;">Đang kết nối ví Pi...</p>
+    .nav-menu {
+      position: fixed;
+      top: 0;
+      left: -100%;
+      width: 75%;
+      height: 100%;
+      background: white;
+      transition: left 0.3s ease;
+      z-index: 999;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.15);
+    }
+    .nav-menu.show { left: 0; }
+    .nav-menu .header { padding: 20px; background: #ee4d2d; color: white; font-weight: bold; font-size: 18px; }
+    .nav-menu a {
+      display: block;
+      padding: 16px 20px;
+      color: #333;
+      text-decoration: none;
+      border-bottom: 1px solid #eee;
+      font-size: 16px;
+    }
+    
+    .user-info {
+      background: white;
+      margin: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      font-size: 15px;
+      border-left: 5px solid #ee4d2d;
+    }
+    
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      padding: 12px;
+    }
+    .product-card {
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .product-card:hover { transform: translateY(-4px); }
+    .product-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+    .product-info { padding: 12px; }
+    .product-title {
+      font-size: 15px;
+      margin: 0 0 8px;
+      height: 44px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .product-price {
+      color: #ee4d2d;
+      font-weight: bold;
+      font-size: 17px;
+      margin: 6px 0;
+    }
+    .buy-btn, .pay-pi-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      text-align: center;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: bold;
+      margin-top: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+    }
+    .buy-btn { background: #ee4d2d; }
+    .pay-pi-btn { background: linear-gradient(135deg, #673ab7, #9c27b0); }
+    
+    .chat-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #25d366;
+      color: white;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      text-decoration: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
 
-    <button id="buyBtn" onclick="pay()" style="
-        background: #ee4d2d; color: white; 
-        padding: 15px 30px; font-size: 18px; 
-        border: none; border-radius: 8px; display: none;">
-        MUA NGAY (1 PI)
-    </button>
+  <header>
+    <div class="menu-icon" onclick="toggleMenu()">☰</div>
+    <div class="logo">SHOPEE PTM</div>
+    <div style="font-size: 24px;">🛒</div>
+  </header>
 
-    <script>
-        const Pi = window.Pi;
-        Pi.init({ version: "2.0", sandbox: true });
+  <nav class="nav-menu" id="navMenu">
+    <div class="header">DANH MỤC</div>
+    <a href="#" onclick="toggleMenu()">Trang chủ</a>
+    <a href="#" onclick="shareApp(); toggleMenu()">Chia sẻ App</a>
+    <a href="#" onclick="toggleMenu()">Liên hệ hỗ trợ</a>
+  </nav>
 
-        // 1. Đăng nhập
-        Pi.authenticate(['username', 'payments'], {
-            onIncompletePaymentFound: function(payment) { console.log(payment); }
-        }).then(function(auth) {
-            // Đăng nhập thành công -> Hiện tên và Nút mua
-            document.getElementById('status').innerHTML = "Chào mừng: <b>" + auth.user.username + "</b>";
-            document.getElementById('status').style.color = "green";
-            document.getElementById('buyBtn').style.display = "inline-block";
-        }).catch(function(error) {
-            document.getElementById('status').innerHTML = "Lỗi: " + error;
-        });
+  <div class="user-info" id="user-display">Đang kết nối ví Pi Network...</div>
 
-        // 2. Hàm thanh toán
-        function pay() {
-            Pi.createPayment({
-                amount: 1,
-                memo: "Demo Step 10",
-                metadata: { orderId: 12345 }
-            }, {
-                onReadyForServerApproval: function(paymentId) {
-                    alert("Đã gửi đơn! PaymentID: " + paymentId);
-                },
-                onReadyForServerCompletion: function(paymentId, txid) {
-                    alert("THÀNH CÔNG! TxID: " + txid);
-                },
-                onCancel: function(paymentId) { alert("Đã hủy"); },
-                onError: function(error, payment) { alert("Lỗi: " + error); }
-            });
+  <div class="product-grid">
+    <div class="product-card">
+      <img src="https://via.placeholder.com/300x300/ee4d2d/ffffff?text=Áo+Thun+Nam" alt="Áo thun nam">
+      <div class="product-info">
+        <div class="product-title">Áo thun nam Shopee Style</div>
+        <div class="product-price">99.000đ</div>
+        <a class="buy-btn" href="https://collshp.com/mediaplusptm13968?view=storefront" target="_blank">XEM TRÊN SHOPEE</a>
+        <button class="pay-pi-btn" onclick="buyWithPi('Áo thun nam Shopee Style', 1)">MUA BẰNG PI (1 Pi)</button>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <img src="https://via.placeholder.com/300x300/673ab7/ffffff?text=Giày+Sneaker" alt="Giày sneaker">
+      <div class="product-info">
+        <div class="product-title">Giày Sneaker mẫu mới cực chất</div>
+        <div class="product-price">299.000đ</div>
+        <a class="buy-btn" href="https://collshp.com/mediaplusptm13968?view=storefront" target="_blank">XEM TRÊN SHOPEE</a>
+        <button class="pay-pi-btn" onclick="buyWithPi('Giày Sneaker mẫu mới', 3)">MUA BẰNG PI (3 Pi)</button>
+      </div>
+    </div>
+  </div>
+
+  <a href="https://wa.me/84974457838" class="chat-btn" target="_blank">💬</a>
+
+  <script>
+    Pi.init({ version: "2.0", sandbox: true });
+
+    function toggleMenu() {
+      document.getElementById('navMenu').classList.toggle('show');
+    }
+
+    // Authenticate Pi
+    Pi.authenticate(["username", "payments"], (payment) => {
+      console.log("Incomplete payment found:", payment);
+    })
+      .then((auth) => {
+        console.log("Pi Auth thành công:", auth);
+        document.getElementById('user-display').innerHTML = 
+          Chào <b>${auth.user.username}</b>! Bạn đã kết nối ví Pi thành công.<br>Sẵn sàng mua sắm & hoàn tất bước 10.;
+      })
+      .catch((error) => {
+        console.error("Lỗi authenticate:", error);
+        document.getElementById('user-display').innerHTML = 
+          "Vui lòng mở app trong Pi Browser để đăng nhập Pi.";
+      });
+
+    // Thanh toán Pi
+    function buyWithPi(productName, amount) {
+      const paymentData = {
+        amount: amount,
+        memo: Mua ${productName} trên Shopee PTM,
+        metadata: { product: productName, orderId: PTM-${Date.now()} }
+      };
+
+      const callbacks = {
+        onReadyForServerApproval: (paymentId) => {
+          console.log("Payment ID chờ approve:", paymentId);
+          alert(Đang xử lý thanh toán \( {productName} ( \){amount} Pi)...\nPayment ID: ${paymentId});
+        },
+        onReadyForServerCompletion: (paymentId, txid) => {
+          console.log("Thanh toán thành công! TxID:", txid);
+          alert(🎉 THANH TOÁN THÀNH CÔNG!\nSản phẩm: ${productName}\nSố Pi: ${amount}\nTxID: ${txid}\nCảm ơn bạn!);
+        },
+        onCancel: () => alert("Bạn đã hủy thanh toán."),
+        onError: (error) => {
+          console.error("Lỗi payment:", error);
+          alert("Lỗi: " + (error.message || "Thử lại sau nhé!"));
         }
-    </script>
+      };
+
+      Pi.createPayment(paymentData, callbacks);
+    }
+
+    function shareApp() {
+      Pi.openShareDialog({
+        title: "Shopee PTM - Mua hàng bằng Pi",
+        content: "App affiliate Shopee + thanh toán Pi siêu tiện! Trải nghiệm ngay tại pi-shopee.vercel.app"
+      });
+    }
+
+    console.log("%cShopee PTM App - Deployed on Vercel - Testnet Ready", "color:#ee4d2d; font-weight:bold; font-size:16px;");
+  </script>
 </body>
 </html>
