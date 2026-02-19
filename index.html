@@ -29,17 +29,21 @@
     
     .nav-menu {
       position: fixed;
-      top: 0;
-      left: -100%;
-      width: 75%;
-      height: 100%;
+      top: 0; left: -100%;
+      width: 75%; height: 100%;
       background: white;
       transition: left 0.3s ease;
       z-index: 999;
       box-shadow: 2px 0 10px rgba(0,0,0,0.15);
     }
     .nav-menu.show { left: 0; }
-    .nav-menu .header { padding: 20px; background: #ee4d2d; color: white; font-weight: bold; font-size: 18px; }
+    .nav-menu .header {
+      padding: 20px;
+      background: #ee4d2d;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+    }
     .nav-menu a {
       display: block;
       padding: 16px 20px;
@@ -145,7 +149,7 @@
     <a href="#" onclick="toggleMenu()">Liên hệ hỗ trợ</a>
   </nav>
 
-  <div class="user-info" id="user-display">Đang kết nối ví Pi Network...</div>
+  <div class="user-info" id="user-display">Đang kết nối ví Pi Network... (vui lòng chờ 5-10 giây)</div>
 
   <div class="product-grid">
     <div class="product-card">
@@ -172,29 +176,52 @@
   <a href="https://wa.me/84974457838" class="chat-btn" target="_blank">💬</a>
 
   <script>
-    Pi.init({ version: "2.0", sandbox: true });
+    // Khởi tạo Pi SDK
+    if (window.Pi) {
+      Pi.init({ version: "2.0", sandbox: true });
+    } else {
+      alert("Không tìm thấy Pi SDK. Vui lòng mở trong Pi Browser.");
+    }
 
     function toggleMenu() {
       document.getElementById('navMenu').classList.toggle('show');
     }
 
-    // Authenticate Pi
-    Pi.authenticate(["username", "payments"], (payment) => {
-      console.log("Incomplete payment found:", payment);
+    // Authenticate với debug chi tiết
+    Pi.authenticate(["username", "payments"], function onIncompletePaymentFound(payment) {
+      console.log("Incomplete payment detected:", payment);
     })
-      .then((auth) => {
-        console.log("Pi Auth thành công:", auth);
-        document.getElementById('user-display').innerHTML = 
-          Chào <b>${auth.user.username}</b>! Bạn đã kết nối ví Pi thành công.<br>Sẵn sàng mua sắm & hoàn tất bước 10.;
-      })
-      .catch((error) => {
-        console.error("Lỗi authenticate:", error);
-        document.getElementById('user-display').innerHTML = 
-          "Vui lòng mở app trong Pi Browser để đăng nhập Pi.";
-      });
+    .then(function (auth) {
+      console.log("Authenticate thành công:", auth);
+      document.getElementById('user-display').innerHTML = 
+        Chào <b>${auth.user.username}</b>!<br>Kết nối Pi thành công. Bạn có thể mua bằng Pi ngay bây giờ.;
+      alert("Kết nối Pi thành công!\nUsername: " + auth.user.username);
+    })
+    .catch(function (error) {
+      console.error("Lỗi authenticate:", error);
+      let msg = "Lỗi kết nối Pi: ";
+      if (error && error.message) {
+        msg += error.message;
+      } else {
+        msg += "Không xác định. Vui lòng reload hoặc mở lại trong Pi Browser.";
+      }
+      document.getElementById('user-display').innerHTML = msg;
+      alert(msg);
+    });
 
-    // Thanh toán Pi
+    // Hàm thanh toán
     function buyWithPi(productName, amount) {
+      if (!window.Pi) {
+        alert("Pi SDK chưa load. Vui lòng reload trang.");
+        return;
+      }
+
+      // Kiểm tra đã auth chưa (tránh gọi createPayment khi chưa sẵn sàng)
+      if (!Pi.authenticated) {
+        alert("Chưa kết nối Pi thành công!\nVui lòng chờ thông báo 'Chào [username]' rồi thử lại.");
+        return;
+      }
+
       const paymentData = {
         amount: amount,
         memo: Mua ${productName} trên Shopee PTM,
@@ -202,18 +229,20 @@
       };
 
       const callbacks = {
-        onReadyForServerApproval: (paymentId) => {
+        onReadyForServerApproval: function(paymentId) {
           console.log("Payment ID chờ approve:", paymentId);
-          alert(Đang xử lý thanh toán \( {productName} ( \){amount} Pi)...\nPayment ID: ${paymentId});
+          alert(Thanh toán đang chờ phê duyệt từ server.\nPayment ID: ${paymentId}\n(Sandbox mode - cần backend approve));
         },
-        onReadyForServerCompletion: (paymentId, txid) => {
-          console.log("Thanh toán thành công! TxID:", txid);
-          alert(🎉 THANH TOÁN THÀNH CÔNG!\nSản phẩm: ${productName}\nSố Pi: ${amount}\nTxID: ${txid}\nCảm ơn bạn!);
+        onReadyForServerCompletion: function(paymentId, txid) {
+          console.log("Thanh toán hoàn tất! TxID:", txid);
+          alert(THÀNH CÔNG!\nSản phẩm: ${productName}\nSố Pi: ${amount}\nTxID: ${txid});
         },
-        onCancel: () => alert("Bạn đã hủy thanh toán."),
-        onError: (error) => {
-          console.error("Lỗi payment:", error);
-          alert("Lỗi: " + (error.message || "Thử lại sau nhé!"));
+        onCancel: function() {
+          alert("Bạn đã hủy thanh toán.");
+        },
+        onError: function(error, payment) {
+          console.error("Lỗi thanh toán:", error);
+          alert("Lỗi thanh toán: " + (error?.message || "Không xác định"));
         }
       };
 
@@ -221,13 +250,17 @@
     }
 
     function shareApp() {
-      Pi.openShareDialog({
-        title: "Shopee PTM - Mua hàng bằng Pi",
-        content: "App affiliate Shopee + thanh toán Pi siêu tiện! Trải nghiệm ngay tại pi-shopee.vercel.app"
-      });
+      if (window.Pi && Pi.openShareDialog) {
+        Pi.openShareDialog({
+          title: "Shopee PTM",
+          content: "Mua sắm Shopee bằng Pi Network! Truy cập: https://pi-shopee.vercel.app"
+        });
+      } else {
+        alert("Chức năng chia sẻ chưa sẵn sàng.");
+      }
     }
 
-    console.log("%cShopee PTM App - Deployed on Vercel - Testnet Ready", "color:#ee4d2d; font-weight:bold; font-size:16px;");
+    console.log("%cShopee PTM - Vercel Deploy - Testnet Sandbox Ready", "color:#ee4d2d; font-weight:bold;");
   </script>
 </body>
 </html>
