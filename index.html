@@ -6,18 +6,12 @@
   <title>Shopee PTM - Mua bằng Pi</title>
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <style>
-    body { margin:0; font-family: 'Segoe UI',sans-serif; background:#f5f5f5; color:#333; }
-    header {
-      background:#ee4d2d; color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;
-      position:sticky; top:0; z-index:1000; box-shadow:0 2px 8px rgba(0,0,0,0.1);
-    }
+    body { margin:0; font-family:'Segoe UI',sans-serif; background:#f5f5f5; color:#333; }
+    header { background:#ee4d2d; color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1000; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
     .logo { font-size:22px; font-weight:bold; }
     .menu-icon { font-size:30px; cursor:pointer; }
     
-    .nav-menu {
-      position:fixed; top:0; left:-100%; width:75%; height:100%; background:#fff; transition:left .3s; z-index:999;
-      box-shadow:2px 0 10px rgba(0,0,0,0.2);
-    }
+    .nav-menu { position:fixed; top:0; left:-100%; width:75%; height:100%; background:#fff; transition:left .3s; z-index:999; box-shadow:2px 0 10px rgba(0,0,0,0.2); }
     .nav-menu.show { left:0; }
     .nav-menu .top { padding:20px; background:#ee4d2d; color:#fff; font-weight:bold; font-size:18px; }
     .nav-menu a { display:block; padding:16px 20px; color:#333; text-decoration:none; border-bottom:1px solid #eee; font-size:16px; }
@@ -27,9 +21,7 @@
       text-align:center; font-size:15px; box-shadow:0 2px 6px rgba(0,0,0,0.08); cursor:pointer;
     }
     .product-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:12px; padding:12px; }
-    .product-card {
-      background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 3px 10px rgba(0,0,0,0.1); transition:.2s;
-    }
+    .product-card { background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 3px 10px rgba(0,0,0,0.1); transition:.2s; }
     .product-card:hover { transform:translateY(-4px); }
     .product-card img { width:100%; height:180px; object-fit:cover; }
     .product-info { padding:12px; }
@@ -58,7 +50,6 @@
     <div style="font-size:24px;">🛒</div>
   </header>
 
-  <!-- Menu -->
   <nav class="nav-menu" id="navMenu">
     <div class="top">DANH MỤC</div>
     <a href="#" onclick="toggleMenu()">🏠 Trang chủ</a>
@@ -66,12 +57,10 @@
     <a href="#" onclick="toggleMenu()">💬 Liên hệ hỗ trợ</a>
   </nav>
 
-  <!-- User Info -->
   <div class="user-info" id="user-display" onclick="tryAuthenticate()">
     Đang kết nối Pi Network... (click để retry)
   </div>
 
-  <!-- Products -->
   <div class="product-grid">
     <div class="product-card">
       <img src="https://via.placeholder.com/300x300/ee4d2d/ffffff?text=Áo+Thun+Nam" alt="Áo thun">
@@ -97,7 +86,6 @@
   <a href="https://wa.me/84974457838" class="chat-btn" target="_blank">💬</a>
 
   <script>
-    // Khởi tạo SDK
     if (window.Pi) Pi.init({ version: "2.0", sandbox: true });
 
     function toggleMenu() {
@@ -112,25 +100,24 @@
       const display = document.getElementById('user-display');
       display.innerHTML = "Đang thử kết nối Pi...";
 
-      Pi.authenticate(["username", "payments"], (p) => console.log("Incomplete payment:", p))
+      Pi.authenticate(["username", "payments"], (p) => console.log("Incomplete:", p))
         .then(auth => {
           display.innerHTML = Chào <b>${auth.user.username}</b>!<br>Kết nối Pi thành công ✓;
-          alert(✅ Kết nối Pi thành công!\n\nUsername: ${auth.user.username}\n\nBây giờ bạn có thể mua bằng Pi.);
+          alert(✅ Kết nối thành công!\n\nUsername: ${auth.user.username}\n\nBây giờ click nút MUA BẰNG PI);
         })
         .catch(err => {
           console.error(err);
           display.innerHTML = "Lỗi kết nối Pi.<br>Click lại để thử (hoặc authorize sandbox)";
-          alert("❌ Lỗi authenticate: " + (err?.message || "Hãy authorize sandbox rồi thử lại!"));
-          authAttempted = false; // cho phép retry
+          alert("❌ Lỗi: " + (err?.message || "Authorize sandbox rồi thử lại!"));
+          authAttempted = false;
         });
     }
 
-    // Tự động thử sau 3 giây
-    setTimeout(tryAuthenticate, 3000);
+    setTimeout(tryAuthenticate, 2500);
 
     function buyWithPi(productName, amount) {
       if (!Pi || !Pi.authenticated) {
-        alert("Chưa kết nối Pi thành công!\n\nVui lòng chờ thông báo xanh hoặc click retry ở trên.");
+        alert("Chưa kết nối Pi thành công!\nClick dòng trên để retry.");
         return;
       }
 
@@ -141,29 +128,21 @@
       };
 
       const callbacks = {
-        onReadyForServerApproval: (paymentId) => {
-          alert(✅ Payment ID: ${paymentId}\n\nĐang chờ server approve (Sandbox));
-        },
-        onReadyForServerCompletion: (paymentId, txid) => {
-          alert🎉 THANH TOÁN THÀNH CÔNG!\n\nSản phẩm: ${productName}\nSố Pi: ${amount}\nTxID: ${txid}`);
-        },
-        onCancel: () => alert("Bạn đã hủy thanh toán."),
-        onError: (error) => alert("Lỗi thanh toán: " + (error?.message || "Vui lòng thử lại"))
+        onReadyForServerApproval: (id) => alert(Payment ID: ${id}\n\nĐang chờ approve (Sandbox)),
+        onReadyForServerCompletion: (id, txid) => alert🎉 THÀNH CÔNG!\nSản phẩm: ${productName}\nTxID: ${txid}`),
+        onCancel: () => alert("Hủy thanh toán"),
+        onError: (err) => alert("Lỗi: " + (err?.message || "Thử lại"))
       };
 
       Pi.createPayment(paymentData, callbacks);
     }
 
     function shareApp() {
-      if (window.Pi) {
-        Pi.openShareDialog({
-          title: "Shopee PTM - Mua bằng Pi",
-          content: "App affiliate Shopee + thanh toán Pi siêu nhanh! Truy cập ngay: https://pi-shopee.vercel.app"
-        });
-      }
+      Pi.openShareDialog({
+        title: "Shopee PTM",
+        content: "Mua sắm Shopee bằng Pi siêu tiện! https://pi-shopee.vercel.app"
+      });
     }
-
-    console.log("%c🚀 Shopee PTM - Optimized & Ready for Testnet", "color:#ee4d2d;font-weight:bold;font-size:14px");
   </script>
 </body>
 </html>
